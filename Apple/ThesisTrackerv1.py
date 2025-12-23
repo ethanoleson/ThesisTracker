@@ -58,7 +58,7 @@ class AppState:
 # ============================================================
 # Persistence helpers
 # ============================================================
-CONFIG_DIR = Path.home() / ".project_todo"
+CONFIG_DIR = Path.home() / "Library" / "Application Support" / "ThesisTracker"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 MAX_RECENT = 5
 
@@ -733,6 +733,10 @@ class MainWindow(QMainWindow):
 # Entry point
 # ============================================================
 def main():
+    QApplication.setApplicationName("ThesisTracker")
+    QApplication.setApplicationDisplayName("ThesisTracker")
+    QApplication.setOrganizationName("ThesisTracker")
+
     app = QApplication(sys.argv)
     w = MainWindow()
     w.show()
