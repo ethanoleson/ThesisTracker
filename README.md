@@ -1,4 +1,6 @@
 # ThesisTracker
+![logo](dev_and_source/icon.png)
+
 A simple program for making thesis writing scheduling and to-do lists easy!
 
 ![Active task page](screenshots/active_Task.png)
