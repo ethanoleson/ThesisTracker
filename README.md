@@ -16,7 +16,8 @@ Right now, this program is only available on MacOS, but will shortly be availabl
 
 ### To download:
 
-Download the repo zip (or clone), open the macOS folder, then click the ThesisTracker application
+Download the repo zip (or clone), open the macOS folder, then click the ThesisTracker application (see below screenshot).
+
 ![download](screenshots/download.png)
 
 
