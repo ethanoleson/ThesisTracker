@@ -1,5 +1,7 @@
 # ThesisTracker
-![logo](dev_and_source/icon.png)
+
+<img src="dev_and_source/icon.png" alt="Logo" style="width:25%; height:auto;">
+
 
 A simple program for making thesis writing scheduling and to-do lists easy!
 
@@ -12,11 +14,10 @@ Each project (Command+N) creates a window, and tasks (Command+T) are sorted by d
 
 Right now, this program is only available on MacOS, but will shortly be available on Windows and Linux. 
 
-*To download:*
+### To download:
 
 Open the macOS folder and download the .dmg file.
 
-Questions or bugs? Email me at eoleson (at) uark (dot) edu.
 
 
 ![Completed task page](screenshots/completed_Task.png)
@@ -24,3 +25,6 @@ Questions or bugs? Email me at eoleson (at) uark (dot) edu.
 ## Syncing
 
 To use this app on multiple computers, the JSON file should be located in a shared folder (e.g., Dropbox, OneDrive, iCloud). I use this program on two computers with a shared folder on Dropbox.
+
+## Questions or bugs?
+ Email me at eoleson (at) uark (dot) edu.
