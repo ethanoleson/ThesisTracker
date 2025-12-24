@@ -16,11 +16,9 @@ Right now, this program is only available on MacOS, but will shortly be availabl
 
 ### To download:
 
-Open the macOS folder and download the .dmg file.
+Download the repo zip (or clone), open the macOS folder, then click the ThesisTracker application
+![download](screenshots/download.png)
 
-
-
-![Completed task page](screenshots/completed_Task.png)
 
 ## Syncing
 
