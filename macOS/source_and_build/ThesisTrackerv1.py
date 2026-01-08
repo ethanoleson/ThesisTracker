@@ -20,13 +20,14 @@ if sys.platform == "darwin":
     os.environ["QT_MAC_DISABLE_NATIVE_MENUBAR"] = "1"
 
 from PyQt6.QtCore import Qt, QDate, QEvent, pyqtSignal, QTimer
-from PyQt6.QtGui import QKeySequence
+from PyQt6.QtGui import QKeySequence, QTextDocument
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QCheckBox, QScrollArea, QFrame,
     QStackedWidget, QInputDialog, QDialog, QDialogButtonBox,
     QLineEdit, QDateEdit, QMessageBox, QFileDialog, QMenu
 )
+from PyQt6.QtPrintSupport import QPrinter
 
 # ============================================================
 # Quotes
@@ -160,10 +161,107 @@ def conflict_candidates(folder: Path, basefile: Path) -> list[Path]:
         pass
     return out
 
+def export_todo_list(
+    projects: list[Project],
+    selected_names: list[str],
+    include_completed: bool,
+    path: Path
+):
+    lines: list[str] = []
+
+    today = date.today().isoformat()
+    lines.append("ThesisTracker – To-Do List")
+    lines.append(f"Generated: {today}")
+    lines.append("")
+
+    for p in projects:
+        if p.name not in selected_names:
+            continue
+
+        tasks = [
+            t for t in p.tasks
+            if include_completed or not t.completed
+        ]
+
+        if not tasks:
+            continue
+
+        lines.append("=" * 32)
+        lines.append(f"PROJECT: {p.name}")
+        lines.append("-" * 32)
+
+        for t in sorted(tasks, key=lambda x: (x.due_date is None, x.due_date or date.max)):
+            box = "[x]" if t.completed else "[ ]"
+            due = f"  Due: {t.due_date.isoformat()}" if t.due_date else ""
+            lines.append(f"{box} {t.title}{due}")
+
+        lines.append("")
+
+    path.write_text("\n".join(lines), encoding="utf-8")
+
 
 # ============================================================
 # Add/edit task dialog
 # ============================================================
+
+class SelectProjectsDialog(QDialog):
+    def __init__(self, projects: list[Project], parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Projects to Export")
+
+        layout = QVBoxLayout(self)
+        self.checks = []
+
+        for p in projects:
+            cb = QCheckBox(p.name)
+            cb.setChecked(True)
+            self.checks.append((cb, p))
+            layout.addWidget(cb)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok |
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def selected_projects(self) -> list[Project]:
+        return [p for cb, p in self.checks if cb.isChecked()]
+
+class ExportProjectsDialog(QDialog):
+    def __init__(self, projects: list[Project], parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Export To-Do List")
+
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Select projects to include:"))
+
+        self.checkboxes: dict[str, QCheckBox] = {}
+        for p in projects:
+            cb = QCheckBox(p.name)
+            cb.setChecked(True)
+            self.checkboxes[p.name] = cb
+            layout.addWidget(cb)
+
+        self.include_completed = QCheckBox("Include completed tasks")
+        self.include_completed.setChecked(False)
+        layout.addWidget(self.include_completed)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok |
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def selected_projects(self) -> list[str]:
+        return [
+            name for name, cb in self.checkboxes.items()
+            if cb.isChecked()
+        ]
 class AddTaskDialog(QDialog):
     def __init__(self, parent: QWidget | None = None, task: Task | None = None):
         super().__init__(parent)
@@ -583,6 +681,13 @@ class MainWindow(QMainWindow):
         act_view_completed.setShortcut(QKeySequence("Ctrl+2"))
         act_view_completed.triggered.connect(lambda: self.stack.setCurrentWidget(self.completed))
 
+        proj.addSeparator()
+
+
+        act_export = proj.addAction("Export To-Do List (PDF)…")
+        act_export.setShortcut(QKeySequence("Ctrl+P"))
+        act_export.triggered.connect(self.export_todo_list_pdf)
+
     def populate_recent_menu(self):
         self.recent_menu.clear()
         rec = self.cfg.get("recent", [])
@@ -770,6 +875,78 @@ class MainWindow(QMainWindow):
         # also rebuild highlight without forcing a different project
         self.save_and_rebuild()
 
+    def export_todo_list_pdf(self):
+        if not self.state.projects:
+            QMessageBox.information(self, "No projects", "There are no projects to export.")
+            return
+
+        dlg = SelectProjectsDialog(self.state.projects, self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        projects = dlg.selected_projects()
+        if not projects:
+            QMessageBox.information(self, "Nothing selected", "No projects were selected.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export To-Do List (PDF)",
+            str(Path.home() / "Todo_List.pdf"),
+            "PDF Files (*.pdf)"
+        )
+        if not path:
+            return
+
+        html = """
+        <html>
+        <head>
+            <style>
+                body {
+                    font-family: Helvetica, Arial, sans-serif;
+                    font-size: 11pt;
+                }
+                h1 {
+                    font-size: 14pt;
+                    margin-bottom: 10px;
+                }
+                h2 {
+                    font-size: 12pt;
+                    margin-top: 18px;
+                    margin-bottom: 6px;
+                }
+                ul {
+                    list-style-type: none;
+                    padding-left: 0;
+                    margin-left: 0;
+                }
+                li {
+                    margin-bottom: 6px;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>To-Do List</h1>
+        """
+
+        for p in projects:
+            html += f"<h2>{p.name}</h2><ul>"
+            for t in p.tasks:
+                if not t.completed:
+                    due = f" — due {t.due_date.isoformat()}" if t.due_date else ""
+                    html += f"<li>☐ {t.title}{due}</li>"
+            html += "</ul>"
+
+        html += "</body></html>"
+
+        doc = QTextDocument()
+        doc.setHtml(html)
+
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+        printer.setOutputFileName(path)
+
+        doc.print(printer)
 
 # ============================================================
 # Entry
