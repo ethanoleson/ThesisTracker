@@ -1,0 +1,30 @@
+Steps to create a new dmg
+
+1) ensure the files are in the correct place
+
+1.5) cd into folder
+
+2) update .spec with correct .py file
+
+3) run: 
+	
+	pyinstaller ThesisTracker.spec
+
+4) test the .app
+
+5) create the dmg folder
+
+	mkdir dmg                     
+	cp -R dist/ThesisTracker.app dmg/
+
+6) run this: 
+
+ 	hdiutil create \              
+  	-volname "ThesisTracker" \
+  	-srcfolder dmg \
+  	-ov \
+  	-format UDZO \
+  	ThesisTracker.dmg
+
+
+	
